@@ -1,35 +1,11 @@
+require 'matrix'
+
 class Ingredient
 	attr_reader :name, :properties
-
-	@@mapped_values = {}
 
 	def initialize(name, properties)
 		@name = name
 		@properties = properties
-	end
-
-	def *(factor)
-		if factor.is_a?(Numeric)
-			new_name = "#{factor}*#{@name}"
-			@@mapped_values[new_name] if @@mapped_values.keys.include?(new_name)
-			new_properties = {}
-			@properties.keys.each do |property|
-				new_properties[property] = @properties[property] * factor
-			end
-			new_ingredient = Ingredient.new("#{factor}*#{@name}", new_properties)
-			@@mapped_values[new_name] = new_ingredient
-			return new_ingredient
-		end
-	end
-
-	def +(other)
-		if other.is_a?(Ingredient)
-			new_properties = {}
-			@properties.keys.each do |property|
-				new_properties[property] = [@properties[property] + (other.properties[property] || 0), 0].max
-			end
-			return Ingredient.new("#{@name}+#{other.name}", new_properties)
-		end
 	end
 
 	def to_s
@@ -39,28 +15,28 @@ end
 
 
 class Recipe
-	def initialize
-		@parts = []
+	class << self
+		attr_accessor :scoring_properties
+	end
+
+	def initialize()
+		@recipe_mat_builder = []
+		@coeff_values = []
 	end
 
 	def add(ingredient, teaspoon)
-		@parts << ingredient * teaspoon
+		ingredient_scoring_values = self.class.scoring_properties.map{|sp| ingredient.properties[sp]}
+		@recipe_mat_builder << ingredient_scoring_values
+		@coeff_values << teaspoon
+		nil
 	end
 
-	def score(excluded_properties = [])
-		ingredient = Ingredient
-		result = @parts.inject(nil) do |final_score, part|
-			final_score ? final_score + part : part
-		end
-		result_properties = result.properties
-		scoring_attributes = result_properties.keys.reject{|key|
-			excluded_properties.include?(key)
-		}
-		scoring_values = scoring_attributes.map{|sa| result_properties[sa]}
-		return scoring_values.inject(&:*)
+	def score
+		recipe_mat = Matrix[*@recipe_mat_builder].transpose
+		coeff_mat = Matrix[@coeff_values].transpose
+		(recipe_mat * coeff_mat).to_a.flatten.inject(1){|a, v| a * (v < 0 ? 0 : v)}
 	end
 end
-
 
 
 class RecipeIterator
@@ -80,31 +56,31 @@ class RecipeIterator
 	end
 
 	private
-	def get_teaspoons
-		local_count = @count
-		counts = []
-		while local_count > 0
-			counts << (local_count & @bit_mask)
-			local_count >>= @total_bitsize
+		def get_teaspoons
+			local_count = @count
+			counts = []
+			while local_count > 0
+				counts << (local_count & @bit_mask)
+				local_count >>= @total_bitsize
+			end
+			return counts
 		end
-		return counts
-	end
 
-	def has_next
-		@count += 1
-		while (!is_valid && !done?)
-			@count +=1
+		def has_next
+			@count += 1
+			while !(is_valid || done?)
+				@count +=1
+			end
+			!done?
 		end
-		!done?
-	end
 
-	def is_valid
-		get_teaspoons.inject(&:+) == @total
-	end
+		def is_valid
+			get_teaspoons.inject(&:+) == @total
+		end
 
-	def done?
-		@count >= @max
-	end
+		def done?
+			@count >= @max
+		end
 end
 
 
@@ -130,9 +106,8 @@ count = 1
 ingredient_names = ingredients.keys
 
 recipe_iterator = RecipeIterator.new(TOTAL_TEASPOONS, ingredient_names.length)
-scoring_excluded_properties = ["calories"]
-#p recipe_iterator
-
+scoring_properties = ingredients.values[0].properties.keys - ["calories"]
+Recipe.scoring_properties = scoring_properties
 max_score = 0
 max_recipe = nil
 count = 0
@@ -143,7 +118,7 @@ recipe_iterator.each do |teaspoon_counts|
 	ingredient_names.each_with_index do |name, index|
 		current_recipe.add(ingredients[name], teaspoon_counts[index] || 0)
 	end
-	current_score = current_recipe.score(scoring_excluded_properties)
+	current_score = current_recipe.score #(scoring_excluded_properties)
 	if current_score > max_score
 		max_score = current_score
 		max_recipe = current_recipe
@@ -153,12 +128,9 @@ end
 
 puts "max_score #{max_score} #{max_recipe.inspect}"
 
-# max_score 26834592
-# Winning recipe :
-# #<Recipe:0x0000000170bb50
-#@parts=[
-##<Ingredient:0x0000000170ba10 @name="24*Frosting", @properties={"capacity"=>96, "durability"=>-48, "flavor"=>0, "texture"=>0, "calories"=>120}>,
-##<Ingredient:0x0000000170b948 @name="35*Candy", @properties={"capacity"=>0, "durability"=>175, "flavor"=>-35, "texture"=>0, "calories"=>280}>,
-##<Ingredient:0x0000000170b880 @name="25*Butterscotch", @properties={"capacity"=>-25, "durability"=>0, "flavor"=>125, "texture"=>0, "calories"=>150}>,
-##<Ingredient:0x0000000170b7b8 @name="16*Sugar", @properties={"capacity"=>0, "durability"=>0, "flavor"=>-32, "texture"=>32, "calories"=>16}>
-#]>
+#Correct answer for my input
+#max_score 18965440
+# #<Recipe:0x000000019c85c8
+#   @recipe_mat_builder=[[4, -2, 0, 0], [0, 5, -1, 0], [-1, 0, 5, 0], [0, 0, -2, 2]],
+#   @coeff_values=[24, 29, 31, 16]
+# >
