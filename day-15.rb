@@ -19,9 +19,10 @@ class Recipe
 		attr_accessor :scoring_properties
 	end
 
-	def initialize()
+	def initialize
 		@recipe_mat_builder = []
 		@coeff_values = []
+		@calories = 0
 	end
 
 	def add(ingredient, teaspoon)
@@ -83,41 +84,57 @@ class RecipeIterator
 		end
 end
 
-
 filename = ARGV[0] || "day-15-input.txt"
+@required_calories = (ARGV[1] || "0").to_i
 
 ingredient_line = /^(?<name>\w+):(?<properties>(.*))$/
 properites_segment = /(?<property>\w+)\s+(?<value>(\+|-)?\d+)/
 
-ingredients = {}
+@ingredients = {}
 
 File.readlines(filename).each do |line|
 	result = ingredient_line.match(line)
 	name = result["name"]
 	properties = result["properties"].scan(properites_segment).map{|p| p[1] = p[1].to_i; p}
 	ingredient = Ingredient.new(name, Hash[properties])
-	ingredients[name] = ingredient
+	@ingredients[name] = ingredient
 	#puts ingredient
 end
 
 TOTAL_TEASPOONS = 100
 count = 1
 
-ingredient_names = ingredients.keys
+@ingredient_names = @ingredients.keys
 
-recipe_iterator = RecipeIterator.new(TOTAL_TEASPOONS, ingredient_names.length)
-scoring_properties = ingredients.values[0].properties.keys - ["calories"]
+recipe_iterator = RecipeIterator.new(TOTAL_TEASPOONS, @ingredient_names.length)
+scoring_properties = @ingredients.values[0].properties.keys - ["calories"]
 Recipe.scoring_properties = scoring_properties
+
+def should_skip?(teaspoon_counts)
+	if @required_calories > 0 
+		count = 0
+		recipe_calories = @ingredient_names.inject(0) do |acc, i_name|
+			val = @ingredients[i_name].properties["calories"] * (teaspoon_counts[count] || 0)
+			count += 1
+			acc + val
+		end
+		return recipe_calories != @required_calories
+	end
+	return false
+end
+
 max_score = 0
 max_recipe = nil
 count = 0
 recipe_iterator.each do |teaspoon_counts|
 	count += 1
+	
+	next if should_skip?(teaspoon_counts)
+
 	current_recipe = Recipe.new
-	#puts "#{count}  #{teaspoon_counts} #{teaspoon_counts.inject(&:+)}"
-	ingredient_names.each_with_index do |name, index|
-		current_recipe.add(ingredients[name], teaspoon_counts[index] || 0)
-	end
+	@ingredient_names.zip(teaspoon_counts) { |iname, tcount|  
+		current_recipe.add(@ingredients[iname], tcount || 0)
+	}
 	current_score = current_recipe.score #(scoring_excluded_properties)
 	if current_score > max_score
 		max_score = current_score
@@ -128,7 +145,7 @@ end
 
 puts "max_score #{max_score} #{max_recipe.inspect}"
 
-#Correct answer for my input
+#Correct answer part-1 input
 #max_score 18965440
 # #<Recipe:0x000000019c85c8
 #   @recipe_mat_builder=[[4, -2, 0, 0], [0, 5, -1, 0], [-1, 0, 5, 0], [0, 0, -2, 2]],
