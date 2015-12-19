@@ -1,7 +1,7 @@
 require 'minitest/autorun'
 require './day-19-helper'
 
-describe "Day19 and utils" do
+describe "TestCase" do
 	describe "Array\#custom_replace" do
 		it "should replace" do
 			x = [1, 2, 3, 4]
@@ -47,12 +47,11 @@ describe "Day19 and utils" do
 		end
 	end
 
-	describe "Day19\#smallest_production_length" do
+	describe "Day19\#smallest_production_length_by_reduction" do
 		it "should return length of smallest reduction from 'HOH' -> 'e'" do
-			productions = {"e" => ["H", "O"]}
-			reversal = {"OH" => "H", "HO" => "H", "HH" => "O"}
+			productions = {"H" => ["OH", "HO"], "O" => ["HH"], "e" => ["H", "O"]}
 			start = "HOH"
-			result = Day19.new(productions, start, reversal).smallest_production_length_by_reduction
+			result = Day19.new(productions, start).smallest_production_length_by_reduction
 			result.must_equal(3)
 		end
 	end

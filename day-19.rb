@@ -13,15 +13,14 @@ File.readlines(filename).each do |line|
 		to = match["to"]
 		productions[from] ||= []
 		productions[from] << match["to"]
-		reductions[to] = from if (from != "e")
 	else
 		start = line.chomp
 	end
 end
 
-puts "Production: #{productions}\n\nReductions:#{reductions}\n\nStart:#{start}\n\n"
+puts "Production: #{productions}\n\nStart:#{start}\n\n"
 
-program = Day19.new(productions, start, reductions)
+program = Day19.new(productions, start)
 
 results = program.results
 puts "Count distinct productions starting with 'Start' : #{results.count}"
