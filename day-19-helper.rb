@@ -68,29 +68,40 @@ class Day19
 	end
 
 	def smallest_production_length_by_reduction
-		queue = [[@start, 0]]
 		seen = Set.new
-		termination_set = @productions["e"] || []
+		termination_in_1_set = @productions["e"]
+		termination_in_2_set = @productions.values
 		@count = -1
 		found = false
-		replacement_strings_by_length = @reversals.keys.sort_by(&:length).reverse
-		iter_count2 = 0
+
+
+		puts "Dead end production values #{terminal_production_values}"
+		queue = [[reduction_start = clean_reversals_make_start_string_for_reduction, 0]]
+		puts "Reduction_start #{reduction_start}"
+		puts "Reversals #{@reversals}"
 		iter_count1 = 0
+
 		while queue.length > 0 && !found
 			#puts "#{queue[0]}"
 			iter_count1 += 1
 			start, c = queue.shift
-			if termination_set.include?(start)
+			if termination_in_1_set.include?(start)
 				found = true
 				@count = c + 1
 				break
 			end
-			replacement_strings_by_length.each do |key|
+			if termination_in_2_set.include?(start)
+				found = true
+				@count = c + 2
+				break
+			end
+			iter_count2 = 0
+			@reversals.keys.each do |key|
 				value = @reversals[key]
 				#exit 0 if (iter_count>= 200)
 				start.get_all_indices(key) do |idx|
 					iter_count2 += 1
-					print "-" if iter_count2 % 10000 == 0
+					print "|#{queue.length}->#{queue.last[0].length}->" if iter_count2 % 100 == 0
 					reduced_string = start.replace_at(idx, idx + key.length - 1, value)
 
 					#puts "Replacing #{key} at #{idx} with #{value} in \n#{start}\n to give\n#{reduced_string}\n\n"
@@ -98,8 +109,30 @@ class Day19
 				end
 			end
 			#exit 0 if (iter_count >= 200)
-			print "." if iter_count1 % 10000 == 0
+			print "|#{queue.length}->#{queue.last[0].length}.>" if iter_count1 % 100 == 0
 		end
 		return @count
 	end
+
+	private
+		def terminal_production_values
+			replacement_strings_by_length = @reversals.keys.sort_by(&:length).reverse
+
+			dead_end_production_values = replacement_strings_by_length.take_while{|v| v.length > 2}.inject([]){|acc, v|
+				acc << v if @productions.keys.find{|k| v.start_with?(k)} == nil
+				acc
+			}
+			dead_end_production_values
+		end
+
+		def clean_reversals_make_start_string_for_reduction
+			reduction_start = @start
+			terminal_production_values.each{|patt|
+				while /#{patt}/.match(reduction_start)
+					reduction_start = reduction_start.gsub(patt, @reversals[patt])
+				end
+				@reversals.delete(patt)
+			}
+			reduction_start
+		end
 end
