@@ -84,46 +84,20 @@ class Day19
 	end
 
 	def smallest_production_length_by_reduction
-		seen = Set.new
-		termination_in_1_set = @productions["e"]
-		termination_in_2_set = @productions.values
-		@count = -1
-		found = false
-
-
-		queue = [[@start, 0]]
-		iter_count1 = 0
-
-		while queue.length > 0 && !found
-			#puts "#{queue[0]}"
-			iter_count1 += 1
-			start, c = queue.shift
-			if termination_in_1_set.include?(start)
-				found = true
-				@count = c + 1
-				break
-			end
-			if termination_in_2_set.include?(start)
-				found = true
-				@count = c + 2
-				break
-			end
-			iter_count2 = 0
-			@reductions.keys.each do |key|
-				value = @reductions[key]
-				#exit 0 if (iter_count>= 200)
-				start.get_all_indices(key) do |idx|
-					iter_count2 += 1
-					print "|#{seen.count}-#{queue.length}-#{queue.last[0].length}->" if iter_count2 % 100 == 0
-					reduced_string = start.replace_at(idx, idx + key.length - 1, value)
-
-					#puts "Replacing #{key} at #{idx} with #{value} in \n#{start}\n to give\n#{reduced_string}\n\n"
-					queue << [reduced_string, c + 1] if seen.add?(reduced_string) && reduced_string.length < start.length
+		remaining_string = @start
+	 	reduction_keys_by_length = @reductions.keys.sort_by(&:length)
+		@count = 0
+		while !@productions["e"].include?(remaining_string)
+			next_string = remaining_string
+			reduction_keys_by_length.each do |rk|
+				remaining_string.get_all_indices(rk) do |index|
+					@count += 1
+					next_string = next_string.replace_at(index, index + rk.length - 1, @reductions[rk])
 				end
+				remaining_string = next_string
 			end
-			#exit 0 if (iter_count >= 200)
-			print "|#{seen.count}-#{queue.length}->#{queue.last[0].length}.>" if iter_count1 % 100 == 0
 		end
+		@count += 1 if @productions["e"].include?(remaining_string)
 		return @count
 	end
 end
