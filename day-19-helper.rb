@@ -31,20 +31,14 @@ class Day19
 	def initialize(productions, start)
 		@productions = productions
 		@start = start
+		@seen_bad = Set.new
 		generate_reductions
-		puts "Reductions #{@reductions}"
-	end
-
-	def find_elements
-		@elements = (@start + @productions.values.flatten.join).scan(/[A-Z][a-z]?/).sort.uniq
 	end
 
 	def generate_reductions
-		@non_reducing_elements = find_elements - @productions.keys
-		puts "Elements: #{@elements}\nNon reducing elements #{@non_reducing_elements}"
 		@reductions = @productions.inject({})do |result, (key, values)|
 			values.each{|value|
-				result.merge!({value => key}) if !@non_reducing_elements.include?(value) && key != "e"
+				result.merge!({value => key}) if !value.start_with?("CRn") && key != "e"
 			}
 			result
 		end
@@ -85,19 +79,43 @@ class Day19
 
 	def smallest_production_length_by_reduction
 		remaining_string = @start
-	 	reduction_keys_by_length = @reductions.keys.sort_by(&:length)
 		@count = 0
-		while !@productions["e"].include?(remaining_string)
-			next_string = remaining_string
-			reduction_keys_by_length.each do |rk|
-				remaining_string.get_all_indices(rk) do |index|
-					@count += 1
-					next_string = next_string.replace_at(index, index + rk.length - 1, @reductions[rk])
+		replacement_iter_count = 0
+		iter_count = 0
+		found = false
+		@pbcount = 0
+		while !found
+	 		print "*"
+			remaining_string = @start
+	 		@count = @pbcount
+	 		iter_count = replacement_iter_count = 0
+			r = Random.new
+			while !(found = @productions["e"].include?(remaining_string))
+				rk = @reductions.keys.shuffle(random: r).first
+				idx = remaining_string.index(rk)
+				print "(#{remaining_string.length})<#{rk}>" if iter_count % 10000 == 0
+				if idx != nil
+					remaining_string.gsub!(rk) do |m|
+						if r.rand(1000) > 300
+							@count += 1
+							replacement_iter_count += 1
+							retval = @reductions[rk]
+							print "." 
+						else
+							retval = rk
+						end
+						retval
+					end
 				end
-				remaining_string = next_string
-			end
-		end
-		@count += 1 if @productions["e"].include?(remaining_string)
+	 			iter_count += 1
+	 			if (iter_count - replacement_iter_count) > 1000 #2*reduction_keys_by_length.length
+					print "|Throwing away remaining_string:'#{remaining_string}'-" if remaining_string.length < 25
+					print "l:#{remaining_string.length}-c:#{@count}-(ric:#{replacement_iter_count})>\n"
+					break
+	 			end
+	 		end
+	 	end
+		@count += 1 if found
 		return @count
 	end
 end
