@@ -1,6 +1,8 @@
 require 'prime'
 
 target = (ARGV[0] || "150").to_i
+houses_per_elf = (ARGV[1] || target).to_i
+presents_per_elf = (ARGV[2] || 10).to_i
 
 class PrimeFactorSumCalculator
 	def initialize
@@ -13,17 +15,18 @@ class PrimeFactorSumCalculator
 end
 
 class Fixnum
-	def each_factor(multiplier, limit = nil, &block)
+	def each_factor(limit, &block)
 		count = 0
 		limit ||=self
 		start = [self/limit,1].max
-		(start..self).each{|factor| yield (factor * multiplier) if self % factor == 0 }
+		(start..self).each{|num| yield num if self % num == 0 }
 	end
 end
 
 
 if __FILE__ == $0
 	pfsc = PrimeFactorSumCalculator.new
+
 
 	house_number = 0
 	part1_answer = 0
@@ -39,9 +42,9 @@ if __FILE__ == $0
 
 
 	start = Time.now
-	665280.upto(target/10) do |house|
+	part1_answer.upto(target/10) do |house|
 		presents = 0
-		house.each_factor(11, 50) {|v| presents += v}
+		house.each_factor(houses_per_elf) {|v| presents  += v*presents_per_elf}
 		(puts "Puts house #{house} receives #{presents} presents" ; break) if presents >= target
 		print "." if house % 100 == 0
 	end
