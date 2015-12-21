@@ -12,9 +12,40 @@ class PrimeFactorSumCalculator
 	end
 end
 
-pfsc = PrimeFactorSumCalculator.new
+class Fixnum
+	def each_factor(multiplier, limit = nil, &block)
+		count = 0
+		limit ||=self
+		start = [self/limit,1].max
+		(start..self).each{|factor| yield (factor * multiplier) if self % factor == 0 }
+	end
+end
 
-2.upto(target/10) do |idx|
-	sum_of_factors = Prime.prime_division(idx).map{|(p,i)| pfsc.get_value(p,i)}.inject(&:*)
-	(puts "#{sum_of_factors} #{idx}"; break) if sum_of_factors*10 >= target
+
+if __FILE__ == $0
+	pfsc = PrimeFactorSumCalculator.new
+
+	house_number = 0
+	part1_answer = 0
+	start = Time.now
+	2.upto(target/10) do |idx|
+		house_number = idx
+		sum_of_factors = Prime.prime_division(idx).map{|(p,i)| pfsc.get_value(p,i)}.inject(&:*)
+		break if (part1_answer = sum_of_factors*10) >= target
+	end
+	puts "Puts house #{house_number} receives #{part1_answer} presents"
+	total_time_taken = (Time.now - start).to_i
+	puts "Total time taken for Step 1#{total_time_taken}"
+
+
+	start = Time.now
+	665280.upto(target/10) do |house|
+		presents = 0
+		house.each_factor(11, 50) {|v| presents += v}
+		(puts "Puts house #{house} receives #{presents} presents" ; break) if presents >= target
+		print "." if house % 100 == 0
+	end
+	total_time_taken = (Time.now-start).to_i
+
+	puts "Total time taken for Step #{total_time_taken} "
 end
