@@ -86,7 +86,7 @@ class Day19
 		@pbcount = 0
 		while !found
 	 		print "*"
-			remaining_string = @start
+			remaining_string = @start.clone
 	 		@count = @pbcount
 	 		iter_count = replacement_iter_count = 0
 			r = Random.new
